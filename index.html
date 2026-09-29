@@ -200,7 +200,16 @@
       SUPABASE_URL,
       SUPABASE_KEY
     );
+      const isAdminPage =
+  new URLSearchParams(window.location.search).get("admin") === "1";
 
+if (isAdminPage) {
+  document.getElementById("loginBox").style.display = "block";
+  document.getElementById("portal").style.display = "none";
+} else {
+  document.getElementById("loginBox").style.display = "none";
+  document.getElementById("portal").style.display = "block";
+}
     // Login
     const loginForm = document.getElementById("loginForm");
 
