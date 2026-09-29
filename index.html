@@ -262,7 +262,7 @@ async function loadAdminExpenses() {
   const { data, error } = await supabaseClient
     .from("expenses")
     .select("*")
-    .order("created_at", { ascending: false });
+    .order("journey_date", { ascending: false });
 
   if (error) {
     adminNotice.textContent = "Failed to load expenses: " + error.message;
