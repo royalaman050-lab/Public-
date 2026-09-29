@@ -53,6 +53,45 @@
       overflow-wrap: anywhere;
     }
     #portal { display: none; }
+        .expense-options {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .expense-option {
+      display: block;
+      margin: 0;
+      cursor: pointer;
+    }
+
+    .expense-option input[type="radio"] {
+      position: absolute;
+      opacity: 0;
+      width: 1px;
+      height: 1px;
+    }
+
+    .expense-option span {
+      display: block;
+      padding: 15px 8px;
+      border: 1px solid #ccd3dc;
+      border-radius: 8px;
+      text-align: center;
+      background: white;
+      color: #222;
+    }
+
+    .expense-option input[type="radio"]:checked + span {
+      border: 2px solid #16803c;
+      background: #eaf8ee;
+      font-weight: bold;
+    }
+
+    .expense-option input[type="radio"]:focus-visible + span {
+      outline: 2px solid #1769d2;
+    }
   </style>
 </head>
 <body>
@@ -94,14 +133,43 @@
       <label for="journey">Journey Name</label>
       <input id="journey" type="text" required>
 
-      <label for="head">Expense Head</label>
-      <select id="head" required>
-        <option value="">Select expense head</option>
-        <option value="Travel">Travel</option>
-        <option value="Food">Food</option>
-        <option value="Accommodation">Accommodation</option>
-        <option value="Other">Other</option>
-      </select>
+      
+<label>Expense Head</label>
+<div class="expense-options">
+  <label class="expense-option">
+    <input type="radio" name="head" value="Bike" required>
+    <span>🏍️ Bike</span>
+   </label>
+   <label class="expense-option">
+    <input type="radio" name="head" value="Metro">
+    <span>🚇 Metro</span>
+   </label>
+   <label class="expense-option">
+    <input type="radio" name="head" value="Train">
+    <span>🚆 Train</span>
+   </label>
+    <label class="expense-option">
+     <input type="radio" name="head" value="Cab">
+     <span>🚕 Cab</span>
+     </label>
+     <label class="expense-option">
+     <input type="radio" name="head" value="Bus">
+     <span>🚌 Bus</span>
+     </label>
+      <label class="expense-option">
+      <input type="radio" name="head" value="Food">
+      <span>🍱 Food</span>
+      </label>
+      <label class="expense-option">
+      <input type="radio" name="head" value="Hotel">
+      <span>🏨 Hotel</span>
+      </label>
+      <label class="expense-option">
+      <input type="radio" name="head" value="Other">
+       <span>📌 Other</span>
+       </label>
+       </div>
+      
 
       <label for="party">Party / Vendor Name</label>
       <input id="party" type="text" required>
@@ -263,7 +331,7 @@
           journey_date: document.getElementById("date").value,
           office_name: document.getElementById("office").value.trim(),
           journey_name: document.getElementById("journey").value.trim(),
-          expense_head: document.getElementById("head").value,
+          expense_head: document.querySelector('input[name="head"]:checked')?.value || "",
           party_name: document.getElementById("party").value.trim(),
           amount: amount,
           details: document.getElementById("details").value.trim(),
