@@ -1,0 +1,302 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Instructor Expense Portal</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f3f6fa;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      max-width: 600px;
+      margin: 20px auto;
+      background: white;
+      padding: 22px;
+      border-radius: 12px;
+      box-shadow: 0 2px 12px #00000012;
+    }
+    h1, h2 { text-align: center; }
+    label {
+      display: block;
+      margin-top: 14px;
+      font-weight: bold;
+    }
+    input, select, textarea {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 11px;
+      margin-top: 6px;
+      border: 1px solid #ccd3dc;
+      border-radius: 6px;
+      font-size: 15px;
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 18px;
+      border: 0;
+      border-radius: 6px;
+      background: #1769d2;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    button:disabled { opacity: 0.6; }
+    .notice {
+      margin-top: 14px;
+      text-align: center;
+      overflow-wrap: anywhere;
+    }
+    #portal { display: none; }
+  </style>
+</head>
+<body>
+
+  <div class="container" id="loginBox">
+    <h1>Instructor Login</h1>
+    <form id="loginForm">
+      <label for="loginEmail">Email</label>
+      <input id="loginEmail" type="email" required>
+
+      <label for="loginPassword">Password</label>
+      <input id="loginPassword" type="password" required>
+
+      <button type="submit" id="loginButton">Login</button>
+      <p class="notice" id="loginNotice"></p>
+    </form>
+  </div>
+
+  <main class="container" id="portal">
+    <h1>Instructor Expense Portal</h1>
+    <button type="button" id="logoutButton">Logout</button>
+
+    <form id="expenseForm">
+      <label for="name">Full Name</label>
+      <input id="name" type="text" required>
+
+      <label for="email">Email</label>
+      <input id="email" type="email" required>
+
+      <label for="phone">Phone</label>
+      <input id="phone" type="tel" required>
+
+      <label for="date">Journey Date</label>
+      <input id="date" type="date" required>
+
+      <label for="office">School Name</label>
+      <input id="office" type="text" required>
+
+      <label for="journey">Journey Name</label>
+      <input id="journey" type="text" required>
+
+      <label for="head">Expense Head</label>
+      <select id="head" required>
+        <option value="">Select expense head</option>
+        <option value="Travel">Travel</option>
+        <option value="Food">Food</option>
+        <option value="Accommodation">Accommodation</option>
+        <option value="Other">Other</option>
+      </select>
+
+      <label for="party">Party / Vendor Name</label>
+      <input id="party" type="text" required>
+
+      <label for="amount">Amount</label>
+      <input id="amount" type="number" min="0.01" step="0.01" required>
+
+      <label for="receipt">Receipt (Image or PDF, max 10 MB)</label>
+      <input id="receipt" type="file" accept="image/*,application/pdf" required>
+
+      <label for="details">Details</label>
+      <textarea id="details" rows="4" required></textarea>
+
+      <button type="submit">Submit Expense</button>
+      <p class="notice" id="submitNotice"></p>
+    </form>
+  </main>
+
+  <!-- Supabase library -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <script>
+    // Supabase connection
+    const SUPABASE_URL = "https://hkjoyeucabqnmtzpquxn.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_QIi5MBOnDpDxlRBdUqK63Q_t9kF-bYs";
+
+    const supabaseClient = window.supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_KEY
+    );
+
+    // Login
+    const loginForm = document.getElementById("loginForm");
+
+    loginForm.addEventListener("submit", async function(event) {
+      event.preventDefault();
+
+      const button = document.getElementById("loginButton");
+      const notice = document.getElementById("loginNotice");
+
+      button.disabled = true;
+      notice.textContent = "Logging in...";
+
+      try {
+        const email = document.getElementById("loginEmail").value.trim();
+        const password = document.getElementById("loginPassword").value;
+
+        const { data, error } = await supabaseClient.auth.signInWithPassword({
+          email: email,
+          password: password
+        });
+
+        if (error) throw error;
+
+        const user = data.user;
+
+        const { data: profile, error: profileError } = await supabaseClient
+          .from("profiles")
+          .select("role")
+          .eq("id", user.id)
+          .single();
+
+        if (profileError) throw profileError;
+
+        if (String(profile.role).toLowerCase() !== "admin") {
+          await supabaseClient.auth.signOut();
+          throw new Error("Admin access required.");
+        }
+
+        document.getElementById("loginBox").style.display = "none";
+        document.getElementById("portal").style.display = "block";
+
+        const emailField = document.getElementById("email");
+        if (!emailField.value) emailField.value = user.email || "";
+
+        notice.textContent = "";
+      } catch (error) {
+        notice.textContent = "Login failed: " + error.message;
+      } finally {
+        button.disabled = false;
+      }
+    });
+
+    // Logout
+    document.getElementById("logoutButton").addEventListener("click", async function() {
+      const { error } = await supabaseClient.auth.signOut();
+
+      if (error) {
+        alert("Logout failed: " + error.message);
+        return;
+      }
+
+      document.getElementById("portal").style.display = "none";
+      document.getElementById("loginBox").style.display = "block";
+      loginForm.reset();
+      document.getElementById("expenseForm").reset();
+    });
+
+    // Submit expense
+    document.getElementById("expenseForm").addEventListener("submit", async function(event) {
+      event.preventDefault();
+
+      const form = event.currentTarget;
+      const button = form.querySelector('button[type="submit"]');
+      const notice = document.getElementById("submitNotice");
+
+      button.disabled = true;
+      button.textContent = "Submitting...";
+      notice.textContent = "Please wait...";
+
+      let uploadedPath = null;
+
+      try {
+        const { data: sessionData, error: sessionError } =
+          await supabaseClient.auth.getSession();
+
+        if (sessionError) throw sessionError;
+
+        const user = sessionData.session?.user;
+        if (!user) throw new Error("Please login again.");
+
+        const amount = Number(document.getElementById("amount").value);
+        if (!Number.isFinite(amount) || amount <= 0) {
+          throw new Error("Enter a valid amount.");
+        }
+
+        const file = document.getElementById("receipt").files[0];
+        if (!file) throw new Error("Please select a receipt.");
+
+        const allowedType =
+          file.type === "application/pdf" || file.type.startsWith("image/");
+
+        if (!allowedType) {
+          throw new Error("Only image or PDF receipts are allowed.");
+        }
+
+        if (file.size > 10 * 1024 * 1024) {
+          throw new Error("Receipt must be 10 MB or smaller.");
+        }
+
+        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+        uploadedPath = user.id + "/" + Date.now() + "_" + safeName;
+
+        const { error: uploadError } = await supabaseClient
+          .storage
+          .from("expense-receipts")
+          .upload(uploadedPath, file, {
+            contentType: file.type,
+            upsert: false
+          });
+
+        if (uploadError) throw uploadError;
+
+        const expense = {
+          employee_id: user.id,
+          full_name: document.getElementById("name").value.trim(),
+          email: document.getElementById("email").value.trim(),
+          phone: document.getElementById("phone").value.trim(),
+          journey_date: document.getElementById("date").value,
+          office_name: document.getElementById("office").value.trim(),
+          journey_name: document.getElementById("journey").value.trim(),
+          expense_head: document.getElementById("head").value,
+          party_name: document.getElementById("party").value.trim(),
+          amount: amount,
+          details: document.getElementById("details").value.trim(),
+          receipt_path: uploadedPath,
+          status: "pending",
+          reviewed_by: null,
+          reviewed_at: null
+        };
+
+        const { error: insertError } = await supabaseClient
+          .from("expenses")
+          .insert(expense);
+
+        if (insertError) throw insertError;
+
+        notice.textContent = "Expense submitted successfully!";
+        form.reset();
+
+      } catch (error) {
+        notice.textContent = "Submission failed: " + error.message;
+
+        // Remove uploaded receipt if database insert failed.
+        if (uploadedPath) {
+          await supabaseClient
+            .storage
+            .from("expense-receipts")
+            .remove([uploadedPath]);
+        }
+      } finally {
+        button.disabled = false;
+        button.textContent = "Submit Expense";
+      }
+    });
+  </script>
+</body>
+</html>
