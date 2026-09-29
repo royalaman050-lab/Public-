@@ -306,6 +306,26 @@ async function loadAdminExpenses() {
 
   adminNotice.textContent = `${data.length} expense(s) found.`;
 }
+    // View Receipt
+async function viewReceipt(receiptPath) {
+  try {
+    const { data, error } = await supabaseClient
+      .storage
+      .from("expense-receipts")
+      .createSignedUrl(receiptPath, 300);
+
+    if (error) throw error;
+
+    if (!data || !data.signedUrl) {
+      throw new Error("Could not create receipt link.");
+    }
+
+    window.open(data.signedUrl, "_blank");
+
+  } catch (error) {
+    alert("Receipt open nahi ho rahi: " + error.message);
+  }
+}
 
 // Refresh button
 refreshExpenses.addEventListener("click", loadAdminExpenses);
