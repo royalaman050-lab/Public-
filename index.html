@@ -187,6 +187,42 @@
       <p class="notice" id="submitNotice"></p>
     </form>
   </main>
+  <!-- Admin Dashboard -->
+<section class="container" id="adminDashboard" style="display:none;">
+  <h2>Admin Dashboard</h2>
+
+  <button id="refreshExpenses">Refresh</button>
+  <button id="adminLogout">Logout</button>
+
+  <p id="adminNotice"></p>
+
+  <div style="overflow-x:auto;">
+    <table border="1" cellpadding="10" cellspacing="0" width="100%">
+      <thead>
+        <tr>
+          <th>Instructor</th>
+          <th>Email</th>
+          <th>Phone</th>
+          <th>Journey Date</th>
+          <th>Office</th>
+          <th>Journey</th>
+          <th>Expense Head</th>
+          <th>Party</th>
+          <th>Amount</th>
+          <th>Details</th>
+          <th>Status</th>
+          <th>Receipt</th>
+        </tr>
+      </thead>
+
+      <tbody id="expensesTableBody">
+        <tr>
+          <td colspan="12">No expenses loaded.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
 
   <!-- Supabase library -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -210,6 +246,75 @@ if (isAdminPage) {
   document.getElementById("loginBox").style.display = "none";
   document.getElementById("portal").style.display = "block";
 }
+    // ===============================
+// ADMIN DASHBOARD
+// ===============================
+
+const adminDashboard = document.getElementById("adminDashboard");
+const expensesTableBody = document.getElementById("expensesTableBody");
+const adminNotice = document.getElementById("adminNotice");
+const refreshExpenses = document.getElementById("refreshExpenses");
+const adminLogout = document.getElementById("adminLogout");
+
+async function loadAdminExpenses() {
+  adminNotice.textContent = "Loading expenses...";
+
+  const { data, error } = await supabaseClient
+    .from("expenses")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    adminNotice.textContent = "Failed to load expenses: " + error.message;
+    return;
+  }
+
+  if (!data || data.length === 0) {
+    expensesTableBody.innerHTML = `
+      <tr>
+        <td colspan="12">No expenses submitted yet.</td>
+      </tr>
+    `;
+    adminNotice.textContent = "";
+    return;
+  }
+
+  expensesTableBody.innerHTML = data.map(expense => `
+    <tr>
+      <td>${expense.full_name || ""}</td>
+      <td>${expense.email || ""}</td>
+      <td>${expense.phone || ""}</td>
+      <td>${expense.journey_date || ""}</td>
+      <td>${expense.office_name || ""}</td>
+      <td>${expense.journey_name || ""}</td>
+      <td>${expense.expense_head || ""}</td>
+      <td>${expense.party_name || ""}</td>
+      <td>₹${expense.amount || 0}</td>
+      <td>${expense.details || ""}</td>
+      <td>${expense.status || ""}</td>
+      <td>
+        ${
+          expense.receipt_path
+            ? `<button onclick="viewReceipt('${expense.receipt_path}')">
+                View Receipt
+              </button>`
+            : "No receipt"
+        }
+      </td>
+    </tr>
+  `).join("");
+
+  adminNotice.textContent = `${data.length} expense(s) found.`;
+}
+
+// Refresh button
+refreshExpenses.addEventListener("click", loadAdminExpenses);
+
+// Admin logout
+adminLogout.addEventListener("click", async () => {
+  await supabaseClient.auth.signOut();
+  window.location.href = window.location.pathname;
+});
     // Login
     const loginForm = document.getElementById("loginForm");
 
@@ -244,14 +349,22 @@ if (isAdminPage) {
         if (profileError) throw profileError;
 
         if (String(profile.role).toLowerCase() !== "admin") {
-          await supabaseClient.auth.signOut();
-          throw new Error("Admin access required.");
-        }
+  await supabaseClient.auth.signOut();
+  throw new Error("Admin access required.");
+}
 
-        document.getElementById("loginBox").style.display = "none";
-        document.getElementById("portal").style.display = "block";
+document.getElementById("loginBox").style.display = "none";
 
-        const emailField = document.getElementById("email");
+if (isAdminPage) {
+  document.getElementById("portal").style.display = "none";
+  document.getElementById("adminDashboard").style.display = "block";
+
+  loadAdminExpenses();
+} else {
+  document.getElementById("portal").style.display = "block";
+}
+
+const emailField = document.getElementById("email");
         if (!emailField.value) emailField.value = user.email || "";
 
         notice.textContent = "";
